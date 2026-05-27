@@ -1280,8 +1280,9 @@ function render() {
         ctx.font = "bold 11px 'Courier New', Courier, monospace";
         ctx.fillText(label, btn.x + 6, btn.y + 20);
     }
-    drawShopButton(shopBtn, currentLevel === 3 ? "BUY ICE (150)" : "BUY BLASTER (100)", 100, "#00fff0");
+    drawShopButton(shopBtn, "BUY BLASTER (100)", 100, "#00fff0");
     if (currentLevel === 3) {
+        drawShopButton(shopBtn, "BUY BLASTER (100)", 100, "#00fff0");
         drawShopButton(iceShopBtn, "BUY ICE (150)", 150, "#00ffff");
     }
     ctx.restore();
