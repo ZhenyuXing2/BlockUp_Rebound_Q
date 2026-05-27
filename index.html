@@ -1281,9 +1281,9 @@ function render() {
         ctx.fillText(label, btn.x + 6, btn.y + 20);
     }
     drawShopButton(shopBtn, currentLevel === 3 ? "BUY ICE (150)" : "BUY BLASTER (100)", 100, "#00fff0");
-    if (currentLevel === 3) {
-        drawShopButton(iceShopBtn, "BUY ICE (150)", 150, "#00ffff");
-    }
+   // if (currentLevel === 3) {
+   //     drawShopButton(iceShopBtn, "BUY ICE (150)", 150, "#00ffff");
+   // }
     ctx.restore();
 
     drawActivationButton(regularActivateBtn, "normal", regularBlasters, weaponTimer > 0 && weaponType === "normal");
