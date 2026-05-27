@@ -182,7 +182,7 @@
         <strong>Controls:</strong> <br>
         📱 <strong>Mobile:</strong> Tap screen to Jump. Tap shop box to buy weapon payload.<br>
         💻 <strong>Desktop:</strong> Spacebar to Jump. [B] key to buy weapon. Enter to Pause.<br>
-        <span style="color: #ffff00; font-weight: bold;">💥 Strategy: Hit bosses 5 times to defeat them for +100 PTS! Reach level score targets to advance. Lvl 3 Dragon requires 15s survival!</span>
+        <span style="color: #ffff00; font-weight: bold;">💥 Strategy: Hit bosses 5 times to defeat them for +100 PTS! Reach level score targets to advance. Lvl 3 Dragon requires 10s survival!</span>
     </div>
 
 <script>
@@ -564,7 +564,7 @@ function resetGame() {
     score = 0; hearts = 3; weaponTimer = 0; weaponType = "normal"; regularBlasters = 0; iceBlasters = 0; bloodDrops = []; bossActive = false; bossFreezeTimer = 0;
     bossHP = 5;
     bossWidth = 85; bossHeight = 85; bossDirection = 1;
-    survivalTimerActive = false; survivalTimeRemaining = 15.0;
+    survivalTimerActive = false; survivalTimeRemaining = 10.0;
     lvl1Triggered = false; lvl2Triggered = false;
     nextBossMilestone = 125;
     preBossDropped = { 125: false, 250: false, 375: false, 625: false, 750: false, 875: false, 1125: false, 1250: false, 1375: false, 1500: false };
@@ -664,7 +664,7 @@ function triggerBossFight() {
     
     if (currentLevel === 3) {
         survivalTimerActive = true;
-        survivalTimeRemaining = 15.0; 
+        survivalTimeRemaining = 10.0; 
     }
 }
 
@@ -743,7 +743,7 @@ function gameLoop() {
 }
 
 function update() {
-    // LEVEL 3 CRITERIA: Survive 15 seconds to pass the game campaign
+    // LEVEL 3 CRITERIA: Survive 10 seconds to pass the game campaign
     if (survivalTimerActive && bossActive && !gamePaused && !gameOver && !levelPassed) {
         survivalTimeRemaining -= 1/60; 
         if (survivalTimeRemaining <= 0) {
@@ -1253,7 +1253,7 @@ function render() {
         ctx.fillStyle = "#222"; ctx.fillRect(barX, 20, barWidth, 14);
         
         if (currentLevel === 3) {
-            ctx.fillStyle = "#ffff00"; ctx.fillRect(barX, 20, (survivalTimeRemaining / 15.0) * barWidth, 14);
+            ctx.fillStyle = "#ffff00"; ctx.fillRect(barX, 20, (survivalTimeRemaining / 10.0) * barWidth, 14);
             ctx.fillStyle = "black"; ctx.font = "bold 11px 'Courier New', Courier, monospace"; ctx.textAlign = "center";
             ctx.fillText("SURVIVE: " + survivalTimeRemaining.toFixed(1) + "s", canvas.width / 2, 31);
         } else {
