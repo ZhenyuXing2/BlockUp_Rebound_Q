@@ -1285,7 +1285,7 @@ function drawActivationButton(btn, type, count, active) {
     ctx.fillStyle = canUse ? "#ffffff" : "#999";
     ctx.font = "bold 10px 'Courier New', Courier, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(type === "toxic" ? "TOXIC T" : (type === "ice" ? "ICE I" : "BLASTER R"), btn.x + btn.width / 2, btn.y + 11);
+    ctx.fillText(type === "toxic" ? "T-TOXIC" : (type === "ice" ? "I-ICE" : "R-REGULAR"), btn.x + btn.width / 2, btn.y + 11);
     ctx.font = "bold 14px 'Courier New', Courier, monospace";
     ctx.fillText("x" + count, btn.x + btn.width / 2, btn.y + 58);
     ctx.textAlign = "left";
@@ -1490,12 +1490,12 @@ function render() {
         ctx.font = "bold 11px 'Courier New', Courier, monospace";
         ctx.fillText(label, btn.x + 6, btn.y + 20);
     }
-    drawShopButton(shopBtn, currentLevel >= 3 ? "BUY REG." : "BUY BLASTER", 100, "#00fff0");
+    drawShopButton(shopBtn, currentLevel >= 3 ? "BUY REG.🔫" : "BUY BLASTER", 100, "#00fff0");
     if (currentLevel >= 3) {
-        drawShopButton(iceShopBtn, "BUY ICE", 150, "#00ffff");
+        drawShopButton(iceShopBtn, "BUY ICE❄️", 150, "#00ffff");
     }
     if (currentLevel >= 4) {
-        drawShopButton(toxicShopBtn, "☠ BUY TOXIC", 200, "#b6ff00");
+        drawShopButton(toxicShopBtn, "BUY TOXIC ☠", 200, "#b6ff00");
     }
     ctx.restore();
 
