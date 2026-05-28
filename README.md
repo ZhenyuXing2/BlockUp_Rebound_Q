@@ -13,3 +13,13 @@ __How to play__:
   Touchscreen: 1) Type your name and then start the game; 2) Jump (tap the screen) to avoid being hit by spikes/fires/toxics/etc. 3) Don't forget to collect gift chests🎁. There is surprise inside. 4) Need to buy weapons? Tap the top left shop buttons for weapons and tap the bottom right blaster icons to activate them.
   
 Currently four levels are available. Score 500 to clear level 1, score 1000 to clear level 2, score 1500 and survive 10 seconds after encountering FIRE DRAGON to clear level 3, score 1800 and survive 10 seconds after encountering DEVIL DANDELION to clear level 4.
+
+<img width="781" height="401" alt="Screenshot 2026-05-28 162341" src="https://github.com/user-attachments/assets/7f9b717d-39c8-4f8b-85df-0dabc92484c9" />
+
+
+
+
+https://github.com/user-attachments/assets/35223f17-6236-46f8-8764-c02009f6fce1
+
+
+
