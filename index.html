@@ -221,13 +221,13 @@ let toxicSprays = 0;
 let coyoteBites = 0;
 let lastChestSpawnTime = 0; 
 let bloodDrops = [];
-const sawSizes = [12, 16, 20, 26, 32];
+const sawSizes = [12, 16, 20, 26, 32, 44];
 const shopBtn = { x: 170, y: 22, width: 90, height: 32 };
 const iceShopBtn = { x: 285, y: 22, width: 90, height: 32 };
 const toxicShopBtn = { x: 400, y: 22, width: 90, height: 32 };
-const regularActivateBtn = { x: 644, y: 318, width: 72, height: 72 };
-const iceActivateBtn = { x: 718, y: 318, width: 72, height: 72 };
-const toxicActivateBtn = { x: 570, y: 318, width: 72, height: 72 };
+const regularActivateBtn = { x: 644, y: 318, width: 62, height: 62 };
+const iceActivateBtn = { x: 718, y: 318, width: 62, height: 62 };
+const toxicActivateBtn = { x: 570, y: 318, width: 62, height: 62 };
 
 // --- Boss System ---
 let bossActive = false;
@@ -239,7 +239,7 @@ let bossDirection = 1;
 let bossAttackTimer = 0;
 let bossProjectiles = [];
 let bossFreezeTimer = 0; 
-let bossHP = 5; // Boss can take 8 hits
+let bossHP = 5; // Boss can take 5 hits
 let nextBossMilestone = 125;
 let preBossDropped = { 125: false, 250: false, 375: false, 625: false, 750: false, 875: false, 1125: false, 1250: false, 1375: false, 1500: false };
 
