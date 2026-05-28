@@ -166,12 +166,12 @@
         <div id="startScreen">
             <h1>BlockUp Rebound Q</h1>
             <input type="text" id="playerName" placeholder="TAP TO ENTER NAME" maxlength="10">
-            <button class="btn" id="startBtn">START GAME</button>
+            <button class="btn" id="startBtn">LET'S GO</button>
             <div id="startFooter">
                 <div id="startControls">
                     <strong>Controls:</strong>
-                    Mobile: Tap shop boxes to buy, then tap backpack icons to activate.
-                    Desktop: [B] buys regular. [C] buys ice. [T] buys/uses toxic. [R]/[I] activate. Enter pauses.
+                    Mobile: Tap shop buttons to buy, then tap backpack icons to activate.
+                    Desktop: [B]/[C]/[T] to buy regular/ice/toxic. [R]/[I]/[S] to activate. Enter pauses.
                 </div>
                 <div id="startDesigners">Designed by Daniel, Lennox, Miles, Naomi, and Tuantuan.</div>
             </div>
@@ -577,7 +577,8 @@ window.addEventListener("keydown", (e) => {
     if (e.code === "Space") { e.preventDefault(); jump(); }
     else if (e.code === "KeyB") { buyWeapon("normal"); }
     else if (e.code === "KeyC") { buyWeapon("ice"); }
-    else if (e.code === "KeyT") { if (currentLevel >= 4 && toxicSprays > 0) activateStoredWeapon("toxic"); else buyWeapon("toxic"); }
+    else if (e.code === "KeyT") { buyWeapon("toxic"); }
+    else if (e.code === "KeyS") { activateStoredWeapon("toxic"); }
     else if (e.code === "KeyI") { activateStoredWeapon("ice"); }
     else if (e.code === "KeyR") { activateStoredWeapon("normal"); }
     else if (e.code === "Enter") { if (!gameStarted) executeStartGame(); else togglePause(); }
