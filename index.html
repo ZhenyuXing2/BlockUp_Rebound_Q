@@ -171,7 +171,7 @@
                 <div id="startControls">
                     <strong>Controls:</strong>
                     Mobile: Tap shop boxes to buy, then tap backpack icons to activate.
-                    Desktop: [B] buys regular. [C] buys ice. [R]/[I] activate. Enter pauses.
+                    Desktop: [B] buys regular. [C] buys ice. [T] buys/uses toxic. [R]/[I] activate. Enter pauses.
                 </div>
                 <div id="startDesigners">Designed by Daniel, Lennox, Miles, Naomi, and Tuantuan.</div>
             </div>
@@ -201,9 +201,10 @@ let gamePaused = false;
 let gameOver = false;
 let score = 0;
 let currentPlayerName = "Player 1";
-let hearts = 3;
+let hearts = 4;
 let hitFlashTimer = 0;
 let ceilingCooldown = 0;
+let respawnTimer = 0;
 let speedMult = 1.0;
 
 // --- Level Milestones Tracking Flags ---
@@ -216,13 +217,17 @@ let weaponType = "normal";
 let shootCooldown = 0;
 let regularBlasters = 0;
 let iceBlasters = 0;
+let toxicSprays = 0;
+let coyoteBites = 0;
 let lastChestSpawnTime = 0; 
 let bloodDrops = [];
 const sawSizes = [12, 16, 20, 26, 32];
 const shopBtn = { x: 170, y: 22, width: 145, height: 32 };
 const iceShopBtn = { x: 325, y: 22, width: 150, height: 32 };
+const toxicShopBtn = { x: 485, y: 22, width: 135, height: 32 };
 const regularActivateBtn = { x: 644, y: 318, width: 62, height: 62 };
 const iceActivateBtn = { x: 718, y: 318, width: 62, height: 62 };
+const toxicActivateBtn = { x: 570, y: 318, width: 62, height: 62 };
 
 // --- Boss System ---
 let bossActive = false;
@@ -238,14 +243,18 @@ let bossHP = 5; // Boss can take 8 hits
 let nextBossMilestone = 125;
 let preBossDropped = { 125: false, 250: false, 375: false, 625: false, 750: false, 875: false, 1125: false, 1250: false, 1375: false, 1500: false };
 
-// --- Level 3 Survival Clock ---
+// --- Survival Boss Clock ---
 let survivalTimerActive = false;
-let survivalTimeRemaining = 15.0; 
+let survivalTimeRemaining = 10.0; 
+let survivalTimeTotal = 10.0;
 
 // --- Hazard Arrays ---
 let obstacles = []; 
 let chests = [];
 let lasers = [];
+let coyotes = [];
+let rocks = [];
+let dandelionSeeds = [];
 let spawnTimer = 0;
 let sawAngle = 0; 
 const colors = ["#ff007f", "#cc00ff", "#ff3333"]; 
@@ -289,7 +298,7 @@ const mrBlock = {
 
         // Body 
         if (weaponTimer > 0) {
-            ctx.fillStyle = (weaponType === "ice") ? "#00ffff" : "#00ff66";
+            ctx.fillStyle = weaponType === "toxic" ? "#b6ff00" : ((weaponType === "ice") ? "#00ffff" : "#00ff66");
         } else {
             ctx.fillStyle = "#00bcd4";
         }
@@ -297,9 +306,9 @@ const mrBlock = {
 
         // Gun Arm
         if (weaponTimer > 0) {
-            ctx.fillStyle = (weaponType === "ice") ? "#00ffff" : "#00ff66";
+            ctx.fillStyle = weaponType === "toxic" ? "#b6ff00" : ((weaponType === "ice") ? "#00ffff" : "#00ff66");
             ctx.fillRect(this.width - 4, 18, 12, 6);
-            ctx.fillStyle = (weaponType === "ice") ? "#ffffff" : "#ffcc00";
+            ctx.fillStyle = weaponType === "toxic" ? "#111111" : ((weaponType === "ice") ? "#ffffff" : "#ffcc00");
             ctx.fillRect(this.width + 4, 19, 3, 4);
         } else {
             ctx.fillStyle = "#00bcd4";
@@ -369,7 +378,7 @@ function playSound(type) {
         osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.2);
         gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
     } else if (type === 'laser') {
-        osc.type = "triangle"; osc.frequency.setValueAtTime(weaponType === "ice" ? 750 : 600, audioCtx.currentTime);
+        osc.type = "triangle"; osc.frequency.setValueAtTime(weaponType === "toxic" ? 420 : (weaponType === "ice" ? 750 : 600), audioCtx.currentTime);
         osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
     } else if (type === 'chest' || type === 'buy') {
@@ -430,12 +439,16 @@ function advanceProgress() {
     } else if (currentLevel === 2) {
         currentLevel = 3;
         speedMult = 1.8; 
+    } else if (currentLevel === 3) {
+        currentLevel = 4;
+        speedMult = 1.8;
     }
     levelPassed = false;
-    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = [];
+    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = [];
     volcanoActive = false; bossActive = false; survivalTimerActive = false;
     nextBossMilestone = score + 125;
     if (currentLevel === 3) nextBossMilestone = 1500; 
+    if (currentLevel === 4) nextBossMilestone = 1800;
     spawnTimer = 0;
 }
 
@@ -447,12 +460,14 @@ function jump() {
 
 function buyWeapon(selectedType) {
     if (!gameStarted || gamePaused || gameOver || levelPassed) return;
-    if (selectedType === "ice" && currentLevel !== 3) return;
-    const nextWeaponType = selectedType === "ice" ? "ice" : "normal";
-    const cost = nextWeaponType === "ice" ? 150 : 100;
+    if (selectedType === "ice" && currentLevel < 3) return;
+    if (selectedType === "toxic" && currentLevel < 4) return;
+    const nextWeaponType = selectedType === "toxic" ? "toxic" : (selectedType === "ice" ? "ice" : "normal");
+    const cost = nextWeaponType === "toxic" ? 200 : (nextWeaponType === "ice" ? 150 : 100);
     if (score >= cost) {
         score -= cost;
-        if (nextWeaponType === "ice") iceBlasters++;
+        if (nextWeaponType === "toxic") toxicSprays++;
+        else if (nextWeaponType === "ice") iceBlasters++;
         else regularBlasters++;
         playSound('buy');
     }
@@ -460,7 +475,11 @@ function buyWeapon(selectedType) {
 
 function activateStoredWeapon(selectedType) {
     if (!gameStarted || gamePaused || gameOver || levelPassed) return;
-    if (selectedType === "ice") {
+    if (selectedType === "toxic") {
+        if (toxicSprays <= 0) return;
+        toxicSprays--;
+        weaponType = "toxic";
+    } else if (selectedType === "ice") {
         if (iceBlasters <= 0) return;
         iceBlasters--;
         weaponType = "ice";
@@ -483,7 +502,7 @@ function togglePause() {
 function handleInteraction(clientX, clientY) {
     initAudio();
     
-    if (levelPassed && (currentLevel === 1 || currentLevel === 2)) {
+    if (levelPassed && currentLevel < 4) {
         const rect = canvas.getBoundingClientRect();
         const scaleY = canvas.height / rect.height;
         const canvasY = (clientY - rect.top) * scaleY;
@@ -492,6 +511,7 @@ function handleInteraction(clientX, clientY) {
             return;
         }
     }
+    if (levelPassed && currentLevel === 4) { resetGame(); return; }
     
     if (gameOver) { resetGame(); return; }
 
@@ -501,13 +521,19 @@ function handleInteraction(clientX, clientY) {
     const canvasX = (clientX - rect.left) * scaleX;
     const canvasY = (clientY - rect.top) * scaleY;
 
-    if (canvasX >= iceActivateBtn.x && canvasX <= iceActivateBtn.x + iceActivateBtn.width &&
+    if (canvasX >= toxicActivateBtn.x && canvasX <= toxicActivateBtn.x + toxicActivateBtn.width &&
+        canvasY >= toxicActivateBtn.y && canvasY <= toxicActivateBtn.y + toxicActivateBtn.height) {
+        activateStoredWeapon("toxic");
+    } else if (canvasX >= iceActivateBtn.x && canvasX <= iceActivateBtn.x + iceActivateBtn.width &&
         canvasY >= iceActivateBtn.y && canvasY <= iceActivateBtn.y + iceActivateBtn.height) {
         activateStoredWeapon("ice");
     } else if (canvasX >= regularActivateBtn.x && canvasX <= regularActivateBtn.x + regularActivateBtn.width &&
         canvasY >= regularActivateBtn.y && canvasY <= regularActivateBtn.y + regularActivateBtn.height) {
         activateStoredWeapon("normal");
-    } else if (currentLevel === 3 && canvasX >= iceShopBtn.x && canvasX <= iceShopBtn.x + iceShopBtn.width &&
+    } else if (currentLevel >= 4 && canvasX >= toxicShopBtn.x && canvasX <= toxicShopBtn.x + toxicShopBtn.width &&
+        canvasY >= toxicShopBtn.y && canvasY <= toxicShopBtn.y + toxicShopBtn.height) {
+        buyWeapon("toxic");
+    } else if (currentLevel >= 3 && canvasX >= iceShopBtn.x && canvasX <= iceShopBtn.x + iceShopBtn.width &&
         canvasY >= iceShopBtn.y && canvasY <= iceShopBtn.y + iceShopBtn.height) {
         buyWeapon("ice");
     } else if (canvasX >= shopBtn.x && canvasX <= shopBtn.x + shopBtn.width &&
@@ -551,6 +577,7 @@ window.addEventListener("keydown", (e) => {
     if (e.code === "Space") { e.preventDefault(); jump(); }
     else if (e.code === "KeyB") { buyWeapon("normal"); }
     else if (e.code === "KeyC") { buyWeapon("ice"); }
+    else if (e.code === "KeyT") { if (currentLevel >= 4 && toxicSprays > 0) activateStoredWeapon("toxic"); else buyWeapon("toxic"); }
     else if (e.code === "KeyI") { activateStoredWeapon("ice"); }
     else if (e.code === "KeyR") { activateStoredWeapon("normal"); }
     else if (e.code === "Enter") { if (!gameStarted) executeStartGame(); else togglePause(); }
@@ -560,11 +587,11 @@ function resetGame() {
     currentLevel = 1;
     speedMult = 1.0;
     mrBlock.y = canvas.height - mrBlock.height; mrBlock.velocity = 0;
-    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = [];
-    score = 0; hearts = 3; weaponTimer = 0; weaponType = "normal"; regularBlasters = 0; iceBlasters = 0; bloodDrops = []; bossActive = false; bossFreezeTimer = 0;
+    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = [];
+    score = 0; hearts = 4; respawnTimer = 0; weaponTimer = 0; weaponType = "normal"; regularBlasters = 0; iceBlasters = 0; toxicSprays = 0; coyoteBites = 0; bloodDrops = []; bossActive = false; bossFreezeTimer = 0;
     bossHP = 5;
     bossWidth = 85; bossHeight = 85; bossDirection = 1;
-    survivalTimerActive = false; survivalTimeRemaining = 15.0;
+    survivalTimerActive = false; survivalTimeRemaining = 10.0; survivalTimeTotal = 10.0;
     lvl1Triggered = false; lvl2Triggered = false;
     nextBossMilestone = 125;
     preBossDropped = { 125: false, 250: false, 375: false, 625: false, 750: false, 875: false, 1125: false, 1250: false, 1375: false, 1500: false };
@@ -576,8 +603,9 @@ function resetGame() {
 function manageSpawning() {
     spawnTimer++;
     
-    // Level 3 Final Dragon triggers EXACTLY at 1500 total points
-    if (currentLevel === 3 && score >= 1500 && !bossActive && !levelPassed) {
+    if (currentLevel === 4 && score >= 1800 && !bossActive && !levelPassed) {
+        triggerBossFight();
+    } else if (currentLevel === 3 && score >= 1500 && !bossActive && !levelPassed) {
         triggerBossFight();
     } else if (currentLevel < 3 && score >= nextBossMilestone && !bossActive && !levelPassed) {
         // Only spawn if milestone reached and boss hasn't been spawned/killed yet for this bracket
@@ -601,8 +629,14 @@ function manageSpawning() {
         processBossBehavior(); 
     }
 
-    let currentSpawnInterval = (currentLevel === 3) ? 50 : 75;
-    if (bossActive && currentLevel === 3) currentSpawnInterval = 65;
+    if (currentLevel === 4 && !bossActive) {
+        if (spawnTimer % 360 === 0) spawnCoyote();
+        if (spawnTimer % 240 === 0 && Math.random() < 0.45) spawnRock();
+    }
+
+    let currentSpawnInterval = (currentLevel >= 3) ? 50 : 75;
+    if (currentLevel === 4) currentSpawnInterval = 50;
+    if (bossActive && currentLevel >= 3) currentSpawnInterval = 65;
 
     if (spawnTimer % currentSpawnInterval === 0) {
         let rand = bossActive ? 1 : Math.random();
@@ -613,7 +647,7 @@ function manageSpawning() {
                 radius: sawRadius, width: sawRadius * 2, height: sawRadius, speed: 4.5 * speedMult
             });
         } else {
-            let spawnCount = (currentLevel === 3 && Math.random() < 0.4) ? 2 : 1; 
+            let spawnCount = ((currentLevel === 3 && Math.random() < 0.4) || (currentLevel === 4 && Math.random() < 0.68)) ? 2 : 1; 
             let offsetX = 0;
 
             for(let k=0; k<spawnCount; k++) {
@@ -624,7 +658,7 @@ function manageSpawning() {
                 if (currentLevel === 2 && Math.random() < 0.55) {
                     isMovingSpike = true;
                 }
-                if (currentLevel === 3 && Math.random() < 0.30) {
+                if (currentLevel >= 3 && Math.random() < 0.30) {
                     isMovingSpike = true;
                 }
 
@@ -654,17 +688,18 @@ function manageSpawning() {
 function triggerBossFight() {
     bossActive = true;
     bossX = 850;
-    bossY = currentLevel === 3 ? 105 : 150;
-    bossWidth = currentLevel === 3 ? 150 : 85;
-    bossHeight = currentLevel === 3 ? 120 : 85;
+    bossY = currentLevel >= 3 ? 105 : 150;
+    bossWidth = currentLevel >= 3 ? 150 : 85;
+    bossHeight = currentLevel >= 3 ? 120 : 85;
     bossDirection = 1;
     bossHP = 5; // Reset boss health to 5 shots
     bossAttackTimer = 0; bossProjectiles = []; obstacles = []; 
     bossFreezeTimer = 0;
     
-    if (currentLevel === 3) {
+    if (currentLevel >= 3) {
         survivalTimerActive = true;
-        survivalTimeRemaining = 15.0; 
+        survivalTimeTotal = 10.0;
+        survivalTimeRemaining = 10.0; 
     }
 }
 
@@ -684,6 +719,24 @@ function spawnGiftChest() {
     lastChestSpawnTime = spawnTimer;
 }
 
+function spawnCoyote() {
+    coyotes.push({
+        x: canvas.width + 30, y: canvas.height - 48, width: 58, height: 36,
+        speed: 1.7, dir: -1, hp: 3, attackCooldown: 0
+    });
+}
+
+function spawnRock() {
+    const size = Math.floor(Math.random() * 20) + 18;
+    rocks.push({
+        x: Math.floor(Math.random() * (canvas.width - 120)) + 80,
+        y: -size,
+        size: size,
+        vy: Math.random() * 1.6 + 2.2,
+        spin: Math.random() * Math.PI
+    });
+}
+
 function processBossBehavior() {
     if (bossX > 620) {
         bossX -= 2 * speedMult;
@@ -697,7 +750,17 @@ function processBossBehavior() {
         
         bossAttackTimer++;
         let rate = currentLevel === 1 ? 110 : (currentLevel === 2 ? 85 : 50); 
-        if (bossAttackTimer % rate === 0) { 
+        if (currentLevel === 4 && bossFreezeTimer === 0 && bossAttackTimer % 32 === 0) {
+            const centerX = bossX + bossWidth * 0.35;
+            const centerY = bossY + bossHeight * 0.45;
+            for (let i = -2; i <= 2; i++) {
+                dandelionSeeds.push({
+                    x: centerX, y: centerY,
+                    vx: -4.2, vy: i * 1.15 + Math.sin(spawnTimer * 0.05) * 0.5,
+                    radius: 5, width: 10, height: 10
+                });
+            }
+        } else if (currentLevel < 4 && bossAttackTimer % rate === 0) { 
             let targetY = mrBlock.y + 20;
             let angle = Math.atan2(targetY - (bossY + bossHeight / 2), mrBlock.x - bossX);
             bossProjectiles.push({ 
@@ -743,7 +806,7 @@ function gameLoop() {
 }
 
 function update() {
-    // LEVEL 3 CRITERIA: Survive 15 seconds to pass the game campaign
+    // Survival bosses: Level 3 dragon unlocks Level 4; Level 4 dandelion clears the game.
     if (survivalTimerActive && bossActive && !gamePaused && !gameOver && !levelPassed) {
         survivalTimeRemaining -= 1/60; 
         if (survivalTimeRemaining <= 0) {
@@ -757,11 +820,13 @@ function update() {
     mrBlock.velocity += mrBlock.gravity;
     mrBlock.y += mrBlock.velocity;
     if (ceilingCooldown > 0) ceilingCooldown--;
+    if (respawnTimer > 0) respawnTimer--;
 
     if (mrBlock.y <= 12) {
         mrBlock.y = 12; mrBlock.velocity = 1.5; 
         if (ceilingCooldown === 0) {
-            hearts--; hitFlashTimer = 10; ceilingCooldown = 30; playSound('hit');
+            processPlayerDamage();
+            ceilingCooldown = 30;
             if (hearts <= 0) { gameOver = true; saveGameResult(currentPlayerName, score); return; }
         }
     }
@@ -803,12 +868,30 @@ function update() {
             }
         }
 
+        for (let j = coyotes.length - 1; j >= 0; j--) {
+            let c = coyotes[j];
+            if (l.x < c.x + c.width && l.x + l.width > c.x && l.y < c.y + c.height && l.y + l.height > c.y) {
+                c.hp--;
+                lasers.splice(i, 1);
+                playSound('boss_hit');
+                if (c.hp <= 0) {
+                    coyotes.splice(j, 1);
+                    score += 30;
+                    playSound('explode');
+                    checkProgressMilestones();
+                }
+                break;
+            }
+        }
+
         // CORRECTED BOSS HP & DEFEAT MATRIX
         if (bossActive && l.x < bossX + bossWidth && l.x + l.width > bossX && l.y < bossY + bossHeight && l.y + l.height > bossY) {
             lasers.splice(i, 1); 
             playSound('boss_hit');
             
-            if (currentLevel === 3) {
+            if (currentLevel === 4) {
+                if (weaponType === "toxic") bossFreezeTimer = 90;
+            } else if (currentLevel === 3) {
                 if (weaponType === "ice") {
                     bossFreezeTimer = 75; // Ice laser freeze system
                 }
@@ -845,13 +928,30 @@ function update() {
         if (p.x < -20 || p.y < -20 || p.y > canvas.height + 20) bossProjectiles.splice(i, 1);
     }
 
+    for (let i = dandelionSeeds.length - 1; i >= 0; i--) {
+        let s = dandelionSeeds[i]; s.x += s.vx; s.y += s.vy; s.vy += 0.025;
+        if (mrBlock.x < s.x + s.width && mrBlock.x + mrBlock.width > s.x && mrBlock.y < s.y + s.height && mrBlock.y + mrBlock.height > s.y) {
+            processPlayerDamage(); dandelionSeeds.splice(i, 1); continue;
+        }
+        if (s.x < -20 || s.y < -20 || s.y > canvas.height + 20) dandelionSeeds.splice(i, 1);
+    }
+
+    for (let i = rocks.length - 1; i >= 0; i--) {
+        let r = rocks[i]; r.y += r.vy; r.spin += 0.08;
+        if (mrBlock.x < r.x + r.size && mrBlock.x + mrBlock.width > r.x && mrBlock.y < r.y + r.size && mrBlock.y + mrBlock.height > r.y) {
+            processPlayerDamage(); rocks.splice(i, 1); continue;
+        }
+        if (r.y > canvas.height + 20) rocks.splice(i, 1);
+    }
+
     for (let i = chests.length - 1; i >= 0; i--) {
         let c = chests[i]; c.x -= c.speed;
         if (mrBlock.x < c.x + c.width && mrBlock.x + mrBlock.width > c.x && mrBlock.y < c.y + c.height && mrBlock.y + mrBlock.height > c.y) {
             playSound('chest');
-            if (Math.random() > 0.4 && hearts < 3) hearts++; 
+            if (Math.random() > 0.4 && hearts < 4) hearts++; 
             else { 
-                if (currentLevel === 3 && Math.random() < 0.5) iceBlasters++;
+                if (currentLevel === 4 && Math.random() < 0.35) toxicSprays++;
+                else if (currentLevel >= 3 && Math.random() < 0.5) iceBlasters++;
                 else regularBlasters++;
             }
             chests.splice(i, 1); continue;
@@ -882,6 +982,27 @@ function update() {
         }
         if (o.x + o.width < 0) obstacles.splice(i, 1);
     }
+
+    for (let i = coyotes.length - 1; i >= 0; i--) {
+        let c = coyotes[i];
+        c.x += c.dir * c.speed;
+        if (c.attackCooldown > 0) c.attackCooldown--;
+        if (c.x < 260) c.dir = 1;
+        if (c.x + c.width > canvas.width - 20) c.dir = -1;
+        if (mrBlock.x < c.x + c.width && mrBlock.x + mrBlock.width > c.x && mrBlock.y < c.y + c.height && mrBlock.y + mrBlock.height > c.y) {
+            if (c.attackCooldown === 0) {
+                c.attackCooldown = 55;
+                coyoteBites++;
+                hitFlashTimer = 6;
+                playSound('hit');
+                if (coyoteBites >= 3) {
+                    coyoteBites = 0;
+                    processPlayerDamage();
+                }
+            }
+        }
+        if (c.x > canvas.width + 80 || c.x + c.width < -80) coyotes.splice(i, 1);
+    }
 }
 
 // SCORE DETERMINATION LOGIC: Levels pass strictly at 500 point thresholds.
@@ -898,6 +1019,76 @@ function checkProgressMilestones() {
     }
 }
 
+function drawCoyote(c) {
+    ctx.save();
+    ctx.fillStyle = "#9b6a36";
+    ctx.fillRect(c.x + 8, c.y + 12, 34, 17);
+    ctx.fillStyle = "#c08a4a";
+    ctx.fillRect(c.x, c.y + 8, 18, 16);
+    ctx.fillStyle = "#6b3f1f";
+    ctx.fillRect(c.x + 42, c.y + 14, 13, 8);
+    ctx.fillRect(c.x + 10, c.y + 28, 6, 8);
+    ctx.fillRect(c.x + 32, c.y + 28, 6, 8);
+    ctx.fillStyle = "#f0c77a";
+    ctx.fillRect(c.x + 2, c.y + 4, 6, 6);
+    ctx.fillRect(c.x + 10, c.y + 4, 6, 6);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(c.x + 4, c.y + 13, 3, 3);
+    ctx.fillRect(c.x, c.y + 18, 4, 3);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 9px 'Courier New', Courier, monospace";
+    ctx.fillText(c.hp, c.x + 24, c.y + 23);
+    ctx.restore();
+}
+
+function drawRock(r) {
+    ctx.save();
+    ctx.translate(r.x + r.size / 2, r.y + r.size / 2);
+    ctx.rotate(r.spin);
+    ctx.fillStyle = "#77777f";
+    ctx.beginPath();
+    ctx.moveTo(-r.size * 0.45, -r.size * 0.2);
+    ctx.lineTo(-r.size * 0.1, -r.size * 0.5);
+    ctx.lineTo(r.size * 0.45, -r.size * 0.25);
+    ctx.lineTo(r.size * 0.35, r.size * 0.35);
+    ctx.lineTo(-r.size * 0.35, r.size * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#a0a0a8";
+    ctx.fillRect(-r.size * 0.15, -r.size * 0.25, r.size * 0.18, r.size * 0.12);
+    ctx.restore();
+}
+
+function drawDandelion(x, y, w, h) {
+    ctx.save();
+    const shake = Math.sin(spawnTimer * 0.35) * 4;
+    const cx = x + w * 0.38 + shake;
+    const cy = y + h * 0.35;
+    ctx.strokeStyle = "#31b84a";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.48, y + h);
+    ctx.lineTo(cx, cy + 20);
+    ctx.stroke();
+    ctx.fillStyle = "#36d45b";
+    ctx.fillRect(x + w * 0.35, y + h * 0.78, 34, 10);
+    ctx.fillStyle = "#fff7b0";
+    for (let i = 0; i < 18; i++) {
+        const a = (Math.PI * 2 * i / 18) + Math.sin(spawnTimer * 0.08) * 0.1;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(a) * 28, cy + Math.sin(a) * 28, 8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.fillStyle = "#f7d83d";
+    ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#5a3b00";
+    ctx.font = "bold 12px 'Courier New', Courier, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("WILD", cx, cy + 4);
+    ctx.textAlign = "left";
+    ctx.restore();
+}
+
 function spawnBloodDrops() {
     const baseX = mrBlock.x + mrBlock.width / 2;
     const baseY = mrBlock.y + mrBlock.height / 2;
@@ -909,9 +1100,15 @@ function spawnBloodDrops() {
 }
 
 function processPlayerDamage(source) {
+    if (respawnTimer > 0) return;
     hearts--; hitFlashTimer = 10; playSound('hit');
     if (source && (source.type === "saw" || source.type === "spike")) spawnBloodDrops();
-    if (hearts <= 0) { gameOver = true; saveGameResult(currentPlayerName, score); }
+    if (hearts <= 0) { gameOver = true; saveGameResult(currentPlayerName, score); return; }
+    mrBlock.x = 120;
+    mrBlock.y = Math.max(80, canvas.height / 2 - mrBlock.height / 2);
+    mrBlock.velocity = 0;
+    mrBlock.isJumping = false;
+    respawnTimer = 90;
 }
 
 // --- Render Matrices ---
@@ -1043,8 +1240,8 @@ function drawSpring(x1, y1, x2, y2, coils, amplitude) {
 }
 
 function drawActivationButton(btn, type, count, active) {
-    const color = type === "ice" ? "#00ffff" : "#00ff66";
-    const dark = type === "ice" ? "#006b7a" : "#116633";
+    const color = type === "toxic" ? "#b6ff00" : (type === "ice" ? "#00ffff" : "#00ff66");
+    const dark = type === "toxic" ? "#4d7300" : (type === "ice" ? "#006b7a" : "#116633");
     const canUse = count > 0;
 
     ctx.save();
@@ -1054,14 +1251,22 @@ function drawActivationButton(btn, type, count, active) {
     ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
     ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
 
-    // Pixel pistol icon.
     ctx.fillStyle = canUse ? color : "#777";
-    ctx.fillRect(btn.x + 12, btn.y + 18, 32, 10);
-    ctx.fillRect(btn.x + 40, btn.y + 15, 10, 6);
-    ctx.fillRect(btn.x + 22, btn.y + 28, 10, 18);
-    ctx.fillStyle = canUse ? dark : "#555";
-    ctx.fillRect(btn.x + 14, btn.y + 20, 18, 4);
-    ctx.fillRect(btn.x + 30, btn.y + 30, 6, 8);
+    if (type === "toxic") {
+        ctx.fillRect(btn.x + 18, btn.y + 19, 25, 16);
+        ctx.fillRect(btn.x + 42, btn.y + 22, 10, 5);
+        ctx.fillStyle = canUse ? "#111" : "#444";
+        ctx.font = "bold 18px 'Courier New', Courier, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("☠", btn.x + 30, btn.y + 34);
+    } else {
+        ctx.fillRect(btn.x + 12, btn.y + 18, 32, 10);
+        ctx.fillRect(btn.x + 40, btn.y + 15, 10, 6);
+        ctx.fillRect(btn.x + 22, btn.y + 28, 10, 18);
+        ctx.fillStyle = canUse ? dark : "#555";
+        ctx.fillRect(btn.x + 14, btn.y + 20, 18, 4);
+        ctx.fillRect(btn.x + 30, btn.y + 30, 6, 8);
+    }
 
     if (type === "ice") {
         ctx.strokeStyle = canUse ? "#ffffff" : "#999";
@@ -1071,7 +1276,7 @@ function drawActivationButton(btn, type, count, active) {
         ctx.moveTo(btn.x + 56, btn.y + 38); ctx.lineTo(btn.x + 48, btn.y + 46);
         ctx.moveTo(btn.x + 52, btn.y + 36); ctx.lineTo(btn.x + 52, btn.y + 48);
         ctx.stroke();
-    } else {
+    } else if (type === "normal") {
         ctx.fillStyle = canUse ? "#66ccff" : "#888";
         ctx.fillRect(btn.x + 50, btn.y + 32, 5, 5);
         ctx.fillRect(btn.x + 55, btn.y + 39, 4, 4);
@@ -1080,7 +1285,7 @@ function drawActivationButton(btn, type, count, active) {
     ctx.fillStyle = canUse ? "#ffffff" : "#999";
     ctx.font = "bold 10px 'Courier New', Courier, monospace";
     ctx.textAlign = "center";
-    ctx.fillText(type === "ice" ? "ICE I" : "BLASTER R", btn.x + btn.width / 2, btn.y + 11);
+    ctx.fillText(type === "toxic" ? "TOXIC T" : (type === "ice" ? "ICE I" : "BLASTER R"), btn.x + btn.width / 2, btn.y + 11);
     ctx.font = "bold 14px 'Courier New', Courier, monospace";
     ctx.fillText("x" + count, btn.x + btn.width / 2, btn.y + 58);
     ctx.textAlign = "left";
@@ -1187,10 +1392,12 @@ function render() {
     drawCeilingSpikes();
     mrBlock.draw(ctx);
 
-    ctx.fillStyle = (currentLevel === 3 && weaponType === "ice") ? "#00ffff" : "#00ff66";
+    ctx.fillStyle = weaponType === "toxic" ? "#b6ff00" : ((currentLevel >= 3 && weaponType === "ice") ? "#00ffff" : "#00ff66");
     for(let l of lasers) ctx.fillRect(l.x, l.y, l.width, l.height);
 
     for(let c of chests) drawGiftChest(c);
+    for(let r of rocks) drawRock(r);
+    for(let c of coyotes) drawCoyote(c);
 
     for (let o of obstacles) {
         if (o.type === "saw") {
@@ -1243,17 +1450,20 @@ function render() {
     drawBloodDrops();
 
     if (bossActive) {
-        if (currentLevel === 3) drawFireDragon(bossX, bossY, bossWidth, bossHeight);
+        if (currentLevel === 4) drawDandelion(bossX, bossY, bossWidth, bossHeight);
+        else if (currentLevel === 3) drawFireDragon(bossX, bossY, bossWidth, bossHeight);
         else drawSkullBoss(bossX, bossY, bossWidth, bossHeight);
 
-        ctx.fillStyle = currentLevel === 3 ? "#ff4500" : "#00fff0";
+        ctx.fillStyle = currentLevel === 4 ? "#f7f0aa" : (currentLevel === 3 ? "#ff4500" : "#00fff0");
         for (let p of bossProjectiles) { ctx.beginPath(); ctx.arc(p.x + 8, p.y + 8, p.radius, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#fff7b0";
+        for (let s of dandelionSeeds) { ctx.beginPath(); ctx.arc(s.x + 5, s.y + 5, s.radius, 0, Math.PI * 2); ctx.fill(); }
 
         let barWidth = 200; let barX = canvas.width / 2 - barWidth / 2;
         ctx.fillStyle = "#222"; ctx.fillRect(barX, 20, barWidth, 14);
         
-        if (currentLevel === 3) {
-            ctx.fillStyle = "#ffff00"; ctx.fillRect(barX, 20, (survivalTimeRemaining / 15.0) * barWidth, 14);
+        if (currentLevel >= 3) {
+            ctx.fillStyle = currentLevel === 4 ? "#b6ff00" : "#ffff00"; ctx.fillRect(barX, 20, (survivalTimeRemaining / survivalTimeTotal) * barWidth, 14);
             ctx.fillStyle = "black"; ctx.font = "bold 11px 'Courier New', Courier, monospace"; ctx.textAlign = "center";
             ctx.fillText("SURVIVE: " + survivalTimeRemaining.toFixed(1) + "s", canvas.width / 2, 31);
         } else {
@@ -1280,15 +1490,16 @@ function render() {
         ctx.font = "bold 11px 'Courier New', Courier, monospace";
         ctx.fillText(label, btn.x + 6, btn.y + 20);
     }
-    drawShopButton(shopBtn, "BUY BLASTER (100)", 100, "#00fff0");
-    if (currentLevel === 3) {
-        drawShopButton(shopBtn, "BUY BLASTER (100)", 100, "#00fff0");
-        drawShopButton(iceShopBtn, "BUY ICE (150)", 150, "#00ffff");
-    } else {
-        drawShopButton(shopBtn, "BUY BLASTER (100)", 100, "#00fff0");
+    drawShopButton(shopBtn, currentLevel >= 3 ? "BUY REG." : "BUY BLASTER", 100, "#00fff0");
+    if (currentLevel >= 3) {
+        drawShopButton(iceShopBtn, "BUY ICE", 150, "#00ffff");
+    }
+    if (currentLevel >= 4) {
+        drawShopButton(toxicShopBtn, "☠ BUY TOXIC", 200, "#b6ff00");
     }
     ctx.restore();
 
+    if (currentLevel >= 4) drawActivationButton(toxicActivateBtn, "toxic", toxicSprays, weaponTimer > 0 && weaponType === "toxic");
     drawActivationButton(regularActivateBtn, "normal", regularBlasters, weaponTimer > 0 && weaponType === "normal");
     drawActivationButton(iceActivateBtn, "ice", iceBlasters, weaponTimer > 0 && weaponType === "ice");
 
@@ -1301,17 +1512,17 @@ function render() {
     ctx.fillText("Level-" + currentLevel, canvas.width - 20, 38); ctx.textAlign = "left";
 
     if (weaponTimer > 0) {
-        ctx.fillStyle = (weaponType === "ice") ? "#00ffff" : "#00ff66"; 
+        ctx.fillStyle = weaponType === "toxic" ? "#b6ff00" : ((weaponType === "ice") ? "#00ffff" : "#00ff66"); 
         ctx.font = "bold 12px 'Courier New', Courier, monospace";
-        ctx.fillText(weaponType === "ice" ? "❄️ ICE BLASTER ACTIVE!" : "BLASTER ACTIVE!", 20, 110);
+        ctx.fillText(weaponType === "toxic" ? "TOXIC SPRAY ACTIVE!" : (weaponType === "ice" ? "ICE BLASTER ACTIVE!" : "BLASTER ACTIVE!"), 20, 110);
         ctx.fillStyle = "rgba(0, 255, 255, 0.2)"; ctx.fillRect(20, 118, 120, 6);
-        ctx.fillStyle = (weaponType === "ice") ? "#00ffff" : "#00ff66"; ctx.fillRect(20, 118, (weaponTimer / 600) * 120, 6);
+        ctx.fillStyle = weaponType === "toxic" ? "#b6ff00" : ((weaponType === "ice") ? "#00ffff" : "#00ff66"); ctx.fillRect(20, 118, (weaponTimer / 600) * 120, 6);
     }
 
     if (bossActive && bossX > 620) {
         ctx.fillStyle = "rgba(255, 0, 85, 0.15)"; ctx.fillRect(0, 180, canvas.width, 40);
         ctx.fillStyle = "#ff0055"; ctx.font = "bold 22px 'Courier New', Courier, monospace"; ctx.textAlign = "center";
-        ctx.fillText(currentLevel === 3 ? "🔥 DEVIL DRAGON ENTERS THE CAVERN 🔥" : "💀 DON'T BE SCARED! 💀", canvas.width / 2, 208);
+        ctx.fillText(currentLevel === 4 ? "WILD DANDELION SHAKES!" : (currentLevel === 3 ? "DEVIL DRAGON ENTERS THE CAVERN" : "DON'T BE SCARED!"), canvas.width / 2, 208);
         ctx.textAlign = "left";
     }
 
@@ -1321,11 +1532,11 @@ function render() {
         ctx.fillStyle = "rgba(6, 6, 18, 0.96)"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.textAlign = "center";
         
         if (levelPassed) {
-            if (currentLevel < 3) {
+            if (currentLevel < 4) {
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 32px 'Courier New', Courier, monospace";
                 ctx.fillText("LEVEL " + currentLevel + " CLEAR!", canvas.width / 2, 100);
                 ctx.fillStyle = "#ffffff"; ctx.font = "16px 'Courier New', Courier, monospace";
-                ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : "Cave gateway stabilization verified.", canvas.width / 2, 140);
+                ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
                 
                 ctx.fillStyle = "#ff0055"; ctx.fillRect(canvas.width/2 - 150, 200, 300, 50);
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
@@ -1335,11 +1546,11 @@ function render() {
                 ctx.fillText("🎉 Oh wow! 🎉", canvas.width / 2, 100);
                 
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 24px 'Courier New', Courier, monospace";
-                ctx.fillText("YOU SURVIVED THE INFERNO!", canvas.width / 2, 155);
+                ctx.fillText("YOU SURVIVED THE WILD GARDEN!", canvas.width / 2, 155);
                 
                 ctx.fillStyle = "#ffffff"; ctx.font = "15px 'Courier New', Courier, monospace";
-                ctx.fillText("The DEVIL DRAGON has retreated back into the core!", canvas.width / 2, 205);
-                ctx.fillText("Your split-second dodging mechanics completely cleared the game.", canvas.width / 2, 235);
+                ctx.fillText("The WILD Dandelion scattered back to the meadow!", canvas.width / 2, 205);
+                ctx.fillText("Your dodging and backpack strategy cleared the game.", canvas.width / 2, 235);
                 
                 ctx.fillStyle = "#ffff00"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
                 ctx.fillText("FINAL TOTAL CHAMPION SCORE: " + score, canvas.width / 2, 285);
