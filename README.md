@@ -2,7 +2,7 @@ __This is a mini game designed by a group of grade 3s.__
 
 __Game name__: BlockUp Rebound Q.
 
-__Author of story and game developer__: *Daniel, Lennox, Miles, Naomi, and Tuantuan*
+__Author of story and game developer__: *Excellent Grade 3s in Canada*
 
 __Game story abstract__: An adventurer, *Mr. Block* enters a wild land. He will face lots of creatures he never seen before, and indeed more challenges to overcome. I believe you can help him survive in this wild land and safety back to the city.
 
