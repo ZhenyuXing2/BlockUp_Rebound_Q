@@ -425,7 +425,7 @@ function executeStartGame() {
     if (gameStarted && startScreen.style.display === "none") return;
     initAudio();
     if (nameInput.value.trim() !== "") currentPlayerName = nameInput.value.trim().toUpperCase();
-    else currentPlayerName = "PLAYER 1";
+    else currentPlayerName = "Mr. Block";
     startScreen.style.display = "none";
     gameStarted = true;
     loadLeaderboards();
@@ -435,13 +435,13 @@ function executeStartGame() {
 function advanceProgress() {
     if (currentLevel === 1) {
         currentLevel = 2;
-        speedMult = 1.2;
+        speedMult = 1.4;
     } else if (currentLevel === 2) {
         currentLevel = 3;
         speedMult = 1.8; 
     } else if (currentLevel === 3) {
         currentLevel = 4;
-        speedMult = 1.8;
+        speedMult = 2.0;
     }
     levelPassed = false;
     obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = [];
@@ -1538,7 +1538,7 @@ function render() {
                 ctx.fillText("🥳🥳🥳HAPPY BIRTHDAY🎉🎉🎉", canvas.width / 2, 100);
                 // ctx.fillText("LEVEL " + currentLevel + " CLEAR!", canvas.width / 2, 100);
                 ctx.fillStyle = "#ffffff"; ctx.font = "16px 'Courier New', Courier, monospace";
-                ctx.fillText(currentLevel === 1 ? "WISH YOU HAPPY TODAY, AND EVERYDAY." : (currentLevel === 2 ? "YOU ARE THE BEST!" : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
+                ctx.fillText(currentLevel === 1 ? "WISH YOU HAPPY, TODAY AND EVERYDAY." : (currentLevel === 2 ? "YOU ARE THE BEST!" : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
                 // ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
                 
                 ctx.fillStyle = "#ff0055"; ctx.fillRect(canvas.width/2 - 200, 200, 400, 50);
@@ -1547,7 +1547,7 @@ function render() {
                 // ctx.fillText("ENTER LEVEL " + (currentLevel + 1), canvas.width / 2, 232);
             } else {
                 ctx.fillStyle = "#00ffff"; ctx.font = "bold 38px 'Courier New', Courier, monospace";
-                ctx.fillText("🎉 Oh wow! 🎉", canvas.width / 2, 100);
+                ctx.fillText("🎉 WOW~ 🎉", canvas.width / 2, 100);
                 
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 24px 'Courier New', Courier, monospace";
                 ctx.fillText("Mr. Block SURVIVED THE WILD LAND!", canvas.width / 2, 155);
@@ -1557,14 +1557,14 @@ function render() {
                 ctx.fillText("Your encourage saved Mr. Block.", canvas.width / 2, 235);
                 
                 ctx.fillStyle = "#ffff00"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
-                ctx.fillText("FINAL TOTAL CHAMPION SCORE: " + score, canvas.width / 2, 285);
+                ctx.fillText("FINAL CHAMPION SCORE: " + score, canvas.width / 2, 285);
                 
                 ctx.fillStyle = "#888"; ctx.font = "12px 'Courier New', Courier, monospace";
                 ctx.fillText("Press Enter or Tap Canvas to launch a fresh campaign!", canvas.width / 2, 340);
             }
         } else {
             ctx.fillStyle = "#ff3333"; ctx.font = "bold 36px 'Courier New', Courier, monospace";
-            ctx.fillText("GAME OVER", canvas.width / 2, 70);
+            ctx.fillText("GAME OVER, BUT PARTY IS NOT!", canvas.width / 2, 70);
             ctx.fillStyle = "#888"; ctx.font = "14px 'Courier New', Courier, monospace";
             ctx.fillText("Tap screen or press Enter to restart", canvas.width / 2, 105);
             
