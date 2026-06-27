@@ -1535,16 +1535,13 @@ function render() {
         if (levelPassed) {
             if (currentLevel < 4) {
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 32px 'Courier New', Courier, monospace";
-                ctx.fillText("🥳🥳HAPPY BIRTHDAY, LENNOX🎉🎉", canvas.width / 2, 140);
-                // ctx.fillText("LEVEL " + currentLevel + " CLEAR!", canvas.width / 2, 100);
+                ctx.fillText("LEVEL " + currentLevel + " CLEAR!", canvas.width / 2, 100);
                 ctx.fillStyle = "#ffffff"; ctx.font = "16px 'Courier New', Courier, monospace";
-                ctx.fillText(currentLevel === 1 ? "WISH YOU HAPPY, TODAY AND EVERYDAY." : (currentLevel === 2 ? "YOU ARE THE BEST!" : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
-                // ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
+                ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
                 
                 ctx.fillStyle = "#ff0055"; ctx.fillRect(canvas.width/2 - 200, 200, 400, 50);
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
-                ctx.fillText("MORE HAPPINESS 🎁🎁🎁🎁🎁🎁🎁🎁🎁?", canvas.width / 2, 232);
-                // ctx.fillText("ENTER LEVEL " + (currentLevel + 1), canvas.width / 2, 232);
+                ctx.fillText("ENTER LEVEL " + (currentLevel + 1), canvas.width / 2, 232);
             } else {
                 ctx.fillStyle = "#00ffff"; ctx.font = "bold 38px 'Courier New', Courier, monospace";
                 ctx.fillText("🎉 WOW~ 🎉", canvas.width / 2, 100);
