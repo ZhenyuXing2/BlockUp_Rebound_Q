@@ -255,6 +255,7 @@ let lasers = [];
 let coyotes = [];
 let rocks = [];
 let dandelionSeeds = [];
+let swampTraps = [];
 let spawnTimer = 0;
 let sawAngle = 0; 
 const colors = ["#ff007f", "#cc00ff", "#ff3333"]; 
@@ -442,13 +443,17 @@ function advanceProgress() {
     } else if (currentLevel === 3) {
         currentLevel = 4;
         speedMult = 2.0;
+    } else if (currentLevel === 4) {
+        currentLevel = 5;
+        speedMult = 2.4;
     }
     levelPassed = false;
-    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = [];
+    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = []; swampTraps = [];
     volcanoActive = false; bossActive = false; survivalTimerActive = false;
     nextBossMilestone = score + 125;
     if (currentLevel === 3) nextBossMilestone = 1500; 
     if (currentLevel === 4) nextBossMilestone = 1800;
+    if (currentLevel === 5) nextBossMilestone = 2400;
     spawnTimer = 0;
 }
 
@@ -461,7 +466,7 @@ function jump() {
 function buyWeapon(selectedType) {
     if (!gameStarted || gamePaused || gameOver || levelPassed) return;
     if (selectedType === "ice" && currentLevel < 3) return;
-    if (selectedType === "toxic" && currentLevel < 4) return;
+    if (selectedType === "toxic" && (currentLevel < 4 || currentLevel >= 5)) return;
     const nextWeaponType = selectedType === "toxic" ? "toxic" : (selectedType === "ice" ? "ice" : "normal");
     const cost = nextWeaponType === "toxic" ? 200 : (nextWeaponType === "ice" ? 150 : 100);
     if (score >= cost) {
@@ -502,7 +507,7 @@ function togglePause() {
 function handleInteraction(clientX, clientY) {
     initAudio();
     
-    if (levelPassed && currentLevel < 4) {
+    if (levelPassed && currentLevel < 5) {
         const rect = canvas.getBoundingClientRect();
         const scaleY = canvas.height / rect.height;
         const canvasY = (clientY - rect.top) * scaleY;
@@ -511,7 +516,7 @@ function handleInteraction(clientX, clientY) {
             return;
         }
     }
-    if (levelPassed && currentLevel === 4) { resetGame(); return; }
+    if (levelPassed && currentLevel === 5) { resetGame(); return; }
     
     if (gameOver) { resetGame(); return; }
 
@@ -521,7 +526,7 @@ function handleInteraction(clientX, clientY) {
     const canvasX = (clientX - rect.left) * scaleX;
     const canvasY = (clientY - rect.top) * scaleY;
 
-    if (canvasX >= toxicActivateBtn.x && canvasX <= toxicActivateBtn.x + toxicActivateBtn.width &&
+    if (currentLevel === 4 && canvasX >= toxicActivateBtn.x && canvasX <= toxicActivateBtn.x + toxicActivateBtn.width &&
         canvasY >= toxicActivateBtn.y && canvasY <= toxicActivateBtn.y + toxicActivateBtn.height) {
         activateStoredWeapon("toxic");
     } else if (canvasX >= iceActivateBtn.x && canvasX <= iceActivateBtn.x + iceActivateBtn.width &&
@@ -530,7 +535,7 @@ function handleInteraction(clientX, clientY) {
     } else if (canvasX >= regularActivateBtn.x && canvasX <= regularActivateBtn.x + regularActivateBtn.width &&
         canvasY >= regularActivateBtn.y && canvasY <= regularActivateBtn.y + regularActivateBtn.height) {
         activateStoredWeapon("normal");
-    } else if (currentLevel >= 4 && canvasX >= toxicShopBtn.x && canvasX <= toxicShopBtn.x + toxicShopBtn.width &&
+    } else if (currentLevel === 4 && canvasX >= toxicShopBtn.x && canvasX <= toxicShopBtn.x + toxicShopBtn.width &&
         canvasY >= toxicShopBtn.y && canvasY <= toxicShopBtn.y + toxicShopBtn.height) {
         buyWeapon("toxic");
     } else if (currentLevel >= 3 && canvasX >= iceShopBtn.x && canvasX <= iceShopBtn.x + iceShopBtn.width &&
@@ -577,8 +582,8 @@ window.addEventListener("keydown", (e) => {
     if (e.code === "Space") { e.preventDefault(); jump(); }
     else if (e.code === "KeyB") { buyWeapon("normal"); }
     else if (e.code === "KeyC") { buyWeapon("ice"); }
-    else if (e.code === "KeyT") { buyWeapon("toxic"); }
-    else if (e.code === "KeyS") { activateStoredWeapon("toxic"); }
+    else if (e.code === "KeyT" && currentLevel === 4) { buyWeapon("toxic"); }
+    else if (e.code === "KeyS" && currentLevel === 4) { activateStoredWeapon("toxic"); }
     else if (e.code === "KeyI") { activateStoredWeapon("ice"); }
     else if (e.code === "KeyR") { activateStoredWeapon("normal"); }
     else if (e.code === "Enter") { if (!gameStarted) executeStartGame(); else togglePause(); }
@@ -588,7 +593,7 @@ function resetGame() {
     currentLevel = 1;
     speedMult = 1.0;
     mrBlock.y = canvas.height - mrBlock.height; mrBlock.velocity = 0;
-    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = [];
+    obstacles = []; chests = []; lasers = []; bossProjectiles = []; volcanicProjectiles = []; coyotes = []; rocks = []; dandelionSeeds = []; swampTraps = [];
     score = 0; hearts = 4; respawnTimer = 0; weaponTimer = 0; weaponType = "normal"; regularBlasters = 0; iceBlasters = 0; toxicSprays = 0; coyoteBites = 0; bloodDrops = []; bossActive = false; bossFreezeTimer = 0;
     bossHP = 5;
     bossWidth = 85; bossHeight = 85; bossDirection = 1;
@@ -604,7 +609,9 @@ function resetGame() {
 function manageSpawning() {
     spawnTimer++;
     
-    if (currentLevel === 4 && score >= 1800 && !bossActive && !levelPassed) {
+    if (currentLevel === 5 && score >= 2400 && !bossActive && !levelPassed) {
+        triggerBossFight();
+    } else if (currentLevel === 4 && score >= 1800 && !bossActive && !levelPassed) {
         triggerBossFight();
     } else if (currentLevel === 3 && score >= 1500 && !bossActive && !levelPassed) {
         triggerBossFight();
@@ -630,13 +637,17 @@ function manageSpawning() {
         processBossBehavior(); 
     }
 
-    if (currentLevel === 4 && !bossActive) {
-        if (spawnTimer % 360 === 0) spawnCoyote();
-        if (spawnTimer % 240 === 0 && Math.random() < 0.45) spawnRock();
+    if (currentLevel >= 4 && !bossActive) {
+        const coyoteRate = currentLevel === 5 ? 260 : 320;
+        const rockRate = currentLevel === 5 ? 170 : 240;
+        if (spawnTimer % coyoteRate === 0) spawnCoyote();
+        if (spawnTimer % rockRate === 0 && Math.random() < 0.5) spawnRock();
+        if (currentLevel === 5 && spawnTimer % 210 === 0) spawnSwampTrap();
     }
 
     let currentSpawnInterval = (currentLevel >= 3) ? 50 : 75;
     if (currentLevel === 4) currentSpawnInterval = 50;
+    if (currentLevel === 5) currentSpawnInterval = 42;
     if (bossActive && currentLevel >= 3) currentSpawnInterval = 65;
 
     if (spawnTimer % currentSpawnInterval === 0) {
@@ -648,7 +659,7 @@ function manageSpawning() {
                 radius: sawRadius, width: sawRadius * 2, height: sawRadius, speed: 4.5 * speedMult
             });
         } else {
-            let spawnCount = ((currentLevel === 3 && Math.random() < 0.4) || (currentLevel === 4 && Math.random() < 0.68)) ? 2 : 1; 
+            let spawnCount = ((currentLevel === 3 && Math.random() < 0.4) || (currentLevel === 4 && Math.random() < 0.68) || (currentLevel === 5 && Math.random() < 0.85)) ? 2 : 1; 
             let offsetX = 0;
 
             for(let k=0; k<spawnCount; k++) {
@@ -689,7 +700,7 @@ function manageSpawning() {
 function triggerBossFight() {
     bossActive = true;
     bossX = 850;
-    bossY = currentLevel >= 3 ? 105 : 150;
+    bossY = currentLevel === 5 ? 70 : (currentLevel >= 3 ? 105 : 150);
     bossWidth = currentLevel >= 3 ? 150 : 85;
     bossHeight = currentLevel >= 3 ? 120 : 85;
     bossDirection = 1;
@@ -723,7 +734,7 @@ function spawnGiftChest() {
 function spawnCoyote() {
     coyotes.push({
         x: canvas.width + 30, y: canvas.height - 48, width: 58, height: 36,
-        speed: 1.7, dir: -1, hp: 3, attackCooldown: 0
+        speed: currentLevel === 5 ? 2.6 : 2.1, dir: -1, hp: 3, attackCooldown: 0, step: 0
     });
 }
 
@@ -738,7 +749,42 @@ function spawnRock() {
     });
 }
 
+function spawnSwampTrap() {
+    const width = Math.floor(Math.random() * 36) + 46;
+    swampTraps.push({
+        x: canvas.width + Math.floor(Math.random() * 160),
+        y: canvas.height - 20,
+        width: width,
+        height: 14,
+        speed: 3.3 * speedMult,
+        phase: Math.random() * Math.PI * 2
+    });
+}
+
 function processBossBehavior() {
+    if (currentLevel === 5 && bossX <= 720) {
+        if (bossFreezeTimer > 0) {
+            bossFreezeTimer--;
+        } else {
+            const targetX = mrBlock.x - 40;
+            const targetY = mrBlock.y - 80;
+            bossX += Math.max(-3.6, Math.min(2.4, (targetX - bossX) * 0.025));
+            bossY += Math.max(-2.8, Math.min(2.8, (targetY - bossY) * 0.035));
+            bossY = Math.max(30, Math.min(canvas.height - bossHeight - 80, bossY));
+        }
+        bossAttackTimer++;
+        if (bossFreezeTimer === 0 && bossAttackTimer % 95 === 0) {
+            const claw = { x: bossX + 18, y: bossY + bossHeight - 12, width: bossWidth - 36, height: 28 };
+            if (mrBlock.x < claw.x + claw.width && mrBlock.x + mrBlock.width > claw.x &&
+                mrBlock.y < claw.y + claw.height && mrBlock.y + mrBlock.height > claw.y) {
+                mrBlock.y = 12;
+                mrBlock.velocity = 2.5;
+                processPlayerDamage({ type: "spike" });
+            }
+        }
+        return;
+    }
+
     if (bossX > 620) {
         bossX -= 2 * speedMult;
     } else {
@@ -890,7 +936,10 @@ function update() {
             lasers.splice(i, 1); 
             playSound('boss_hit');
             
-            if (currentLevel === 4) {
+            if (currentLevel === 5) {
+                if (weaponType === "ice") bossFreezeTimer = 75;
+                else if (weaponType === "normal") bossX += 18;
+            } else if (currentLevel === 4) {
                 if (weaponType === "toxic") bossFreezeTimer = 90;
             } else if (currentLevel === 3) {
                 if (weaponType === "ice") {
@@ -945,6 +994,17 @@ function update() {
         if (r.y > canvas.height + 20) rocks.splice(i, 1);
     }
 
+    for (let i = swampTraps.length - 1; i >= 0; i--) {
+        let s = swampTraps[i]; s.x -= s.speed; s.phase += 0.12;
+        if (mrBlock.x < s.x + s.width && mrBlock.x + mrBlock.width > s.x &&
+            mrBlock.y + mrBlock.height > s.y - 6 && mrBlock.y + mrBlock.height < s.y + s.height + 18) {
+            processPlayerDamage();
+            swampTraps.splice(i, 1);
+            continue;
+        }
+        if (s.x + s.width < 0) swampTraps.splice(i, 1);
+    }
+
     for (let i = chests.length - 1; i >= 0; i--) {
         let c = chests[i]; c.x -= c.speed;
         if (mrBlock.x < c.x + c.width && mrBlock.x + mrBlock.width > c.x && mrBlock.y < c.y + c.height && mrBlock.y + mrBlock.height > c.y) {
@@ -986,10 +1046,14 @@ function update() {
 
     for (let i = coyotes.length - 1; i >= 0; i--) {
         let c = coyotes[i];
-        c.x += c.dir * c.speed;
+        const targetX = mrBlock.x + mrBlock.width / 2;
+        const coyoteCenter = c.x + c.width / 2;
+        c.dir = coyoteCenter > targetX ? -1 : 1;
+        const chaseSpeed = Math.abs(coyoteCenter - targetX) < 220 ? c.speed * 1.2 : c.speed;
+        c.x += c.dir * chaseSpeed;
+        c.step += 0.28 * chaseSpeed;
         if (c.attackCooldown > 0) c.attackCooldown--;
-        if (c.x < 260) c.dir = 1;
-        if (c.x + c.width > canvas.width - 20) c.dir = -1;
+        c.x = Math.max(4, Math.min(canvas.width - c.width - 4, c.x));
         if (mrBlock.x < c.x + c.width && mrBlock.x + mrBlock.width > c.x && mrBlock.y < c.y + c.height && mrBlock.y + mrBlock.height > c.y) {
             if (c.attackCooldown === 0) {
                 c.attackCooldown = 55;
@@ -1022,14 +1086,18 @@ function checkProgressMilestones() {
 
 function drawCoyote(c) {
     ctx.save();
+    const run = Math.sin(c.step || 0);
+    const tailLift = Math.cos(c.step || 0) * 3;
     ctx.fillStyle = "#9b6a36";
     ctx.fillRect(c.x + 8, c.y + 12, 34, 17);
     ctx.fillStyle = "#c08a4a";
     ctx.fillRect(c.x, c.y + 8, 18, 16);
     ctx.fillStyle = "#6b3f1f";
-    ctx.fillRect(c.x + 42, c.y + 14, 13, 8);
-    ctx.fillRect(c.x + 10, c.y + 28, 6, 8);
-    ctx.fillRect(c.x + 32, c.y + 28, 6, 8);
+    ctx.fillRect(c.x + 42, c.y + 14 + tailLift, 13, 8);
+    ctx.fillRect(c.x + 10 + run * 3, c.y + 28, 6, 8);
+    ctx.fillRect(c.x + 32 - run * 3, c.y + 28, 6, 8);
+    ctx.fillRect(c.x + 20 - run * 2, c.y + 29, 5, 7);
+    ctx.fillRect(c.x + 42 + run * 2, c.y + 29, 5, 7);
     ctx.fillStyle = "#f0c77a";
     ctx.fillRect(c.x + 2, c.y + 4, 6, 6);
     ctx.fillRect(c.x + 10, c.y + 4, 6, 6);
@@ -1087,6 +1155,69 @@ function drawDandelion(x, y, w, h) {
     ctx.textAlign = "center";
     ctx.fillText("WILD", cx, cy + 4);
     ctx.textAlign = "left";
+    ctx.restore();
+}
+
+function drawEagle(x, y, w, h) {
+    ctx.save();
+    const flap = Math.sin(spawnTimer * 0.18) * 12;
+    ctx.fillStyle = "#5b3a1e";
+    ctx.fillRect(x + w * 0.38, y + h * 0.28, w * 0.24, h * 0.42);
+    ctx.fillStyle = "#7a4f25";
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.42, y + h * 0.34);
+    ctx.lineTo(x - 25, y + h * 0.44 + flap);
+    ctx.lineTo(x + w * 0.35, y + h * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.58, y + h * 0.34);
+    ctx.lineTo(x + w + 25, y + h * 0.44 + flap);
+    ctx.lineTo(x + w * 0.65, y + h * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x + w * 0.43, y + h * 0.12, w * 0.18, h * 0.18);
+    ctx.fillStyle = "#f4c542";
+    ctx.fillRect(x + w * 0.39, y + h * 0.2, w * 0.12, h * 0.06);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(x + w * 0.49, y + h * 0.16, 4, 4);
+    ctx.strokeStyle = "#f4c542";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.44, y + h * 0.72);
+    ctx.lineTo(x + w * 0.38, y + h * 0.92);
+    ctx.moveTo(x + w * 0.56, y + h * 0.72);
+    ctx.lineTo(x + w * 0.63, y + h * 0.92);
+    ctx.stroke();
+    ctx.strokeStyle = "#fff1a8";
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.36 + i * 8, y + h * 0.93);
+        ctx.lineTo(x + w * 0.31 + i * 8, y + h);
+        ctx.moveTo(x + w * 0.62 + i * 8, y + h * 0.93);
+        ctx.lineTo(x + w * 0.57 + i * 8, y + h);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawSwampTrap(s) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 130, 220, 0.72)";
+    ctx.beginPath();
+    ctx.ellipse(s.x + s.width / 2, s.y + s.height / 2, s.width / 2, s.height / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#9eeaff";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+        const yy = s.y + 4 + i * 4;
+        ctx.beginPath();
+        ctx.moveTo(s.x + 8, yy);
+        ctx.quadraticCurveTo(s.x + s.width / 2, yy + Math.sin(s.phase + i) * 4, s.x + s.width - 8, yy);
+        ctx.stroke();
+    }
     ctx.restore();
 }
 
@@ -1397,6 +1528,7 @@ function render() {
     for(let l of lasers) ctx.fillRect(l.x, l.y, l.width, l.height);
 
     for(let c of chests) drawGiftChest(c);
+    for(let s of swampTraps) drawSwampTrap(s);
     for(let r of rocks) drawRock(r);
     for(let c of coyotes) drawCoyote(c);
 
@@ -1451,7 +1583,8 @@ function render() {
     drawBloodDrops();
 
     if (bossActive) {
-        if (currentLevel === 4) drawDandelion(bossX, bossY, bossWidth, bossHeight);
+        if (currentLevel === 5) drawEagle(bossX, bossY, bossWidth, bossHeight);
+        else if (currentLevel === 4) drawDandelion(bossX, bossY, bossWidth, bossHeight);
         else if (currentLevel === 3) drawFireDragon(bossX, bossY, bossWidth, bossHeight);
         else drawSkullBoss(bossX, bossY, bossWidth, bossHeight);
 
@@ -1495,14 +1628,14 @@ function render() {
     if (currentLevel >= 3) {
         drawShopButton(iceShopBtn, "BUY ICE❄️", 150, "#00ffff");
     }
-    if (currentLevel >= 4) {
+    if (currentLevel === 4) {
         drawShopButton(toxicShopBtn, "BUY TOXIC ☠", 200, "#b6ff00");
     }
     ctx.restore();
 
-    if (currentLevel >= 4) drawActivationButton(toxicActivateBtn, "toxic", toxicSprays, weaponTimer > 0 && weaponType === "toxic");
-    drawActivationButton(regularActivateBtn, "normal", regularBlasters, weaponTimer > 0 && weaponType === "normal");
-    drawActivationButton(iceActivateBtn, "ice", iceBlasters, weaponTimer > 0 && weaponType === "ice");
+    if (currentLevel === 4 && (toxicSprays > 0 || (weaponTimer > 0 && weaponType === "toxic"))) drawActivationButton(toxicActivateBtn, "toxic", toxicSprays, weaponTimer > 0 && weaponType === "toxic");
+    if (regularBlasters > 0 || (weaponTimer > 0 && weaponType === "normal")) drawActivationButton(regularActivateBtn, "normal", regularBlasters, weaponTimer > 0 && weaponType === "normal");
+    if (iceBlasters > 0 || (weaponTimer > 0 && weaponType === "ice")) drawActivationButton(iceActivateBtn, "ice", iceBlasters, weaponTimer > 0 && weaponType === "ice");
 
     ctx.fillStyle = "white"; ctx.font = "bold 13px 'Courier New', Courier, monospace";
     ctx.fillText("PLAYER: " + currentPlayerName, 20, 65);
@@ -1533,11 +1666,11 @@ function render() {
         ctx.fillStyle = "rgba(6, 6, 18, 0.96)"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.textAlign = "center";
         
         if (levelPassed) {
-            if (currentLevel < 4) {
+            if (currentLevel < 5) {
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 32px 'Courier New', Courier, monospace";
                 ctx.fillText("LEVEL " + currentLevel + " CLEAR!", canvas.width / 2, 100);
                 ctx.fillStyle = "#ffffff"; ctx.font = "16px 'Courier New', Courier, monospace";
-                ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : "The dragon retreated. Level 4 awaits!"), canvas.width / 2, 140);
+                ctx.fillText(currentLevel === 1 ? "Outer systems bypassed successfully." : (currentLevel === 2 ? "Cave gateway stabilization verified." : (currentLevel === 3 ? "The dragon retreated. Level 4 awaits!" : "The WILD Dandelion drifted away. Level 5 awaits!")), canvas.width / 2, 140);
                 
                 ctx.fillStyle = "#ff0055"; ctx.fillRect(canvas.width/2 - 200, 200, 400, 50);
                 ctx.fillStyle = "#ffffff"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
@@ -1547,11 +1680,11 @@ function render() {
                 ctx.fillText("🎉 WOW~ 🎉", canvas.width / 2, 100);
                 
                 ctx.fillStyle = "#00ff66"; ctx.font = "bold 24px 'Courier New', Courier, monospace";
-                ctx.fillText("Mr. Block SURVIVED THE WILD LAND!", canvas.width / 2, 155);
+                ctx.fillText("Mr. Block SURVIVED THE EAGLE!", canvas.width / 2, 155);
                 
                 ctx.fillStyle = "#ffffff"; ctx.font = "15px 'Courier New', Courier, monospace";
                 ctx.fillText("WELCOME BACK TO THE LOVELY CITY!", canvas.width / 2, 205);
-                ctx.fillText("Your encourage saved Mr. Block.", canvas.width / 2, 235);
+                ctx.fillText("Your courage saved Mr. Block.", canvas.width / 2, 235);
                 
                 ctx.fillStyle = "#ffff00"; ctx.font = "bold 18px 'Courier New', Courier, monospace";
                 ctx.fillText("FINAL CHAMPION SCORE: " + score, canvas.width / 2, 285);
@@ -1561,7 +1694,7 @@ function render() {
             }
         } else {
             ctx.fillStyle = "#ff3333"; ctx.font = "bold 36px 'Courier New', Courier, monospace";
-            ctx.fillText("GAME OVER, BUT PARTY IS NOT!", canvas.width / 2, 70);
+            ctx.fillText("GAME OVER!", canvas.width / 2, 70);
             ctx.fillStyle = "#888"; ctx.font = "14px 'Courier New', Courier, monospace";
             ctx.fillText("Tap screen or press Enter to restart", canvas.width / 2, 105);
             
